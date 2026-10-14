@@ -7,6 +7,17 @@ class AppPreferences(context: Context) {
 
     enum class Theme { SYSTEM, LIGHT, DARK }
     enum class MangaMode { CONTINUOUS_VERTICAL, PAGED_HORIZONTAL }
+    data class Snapshot(val theme: Theme, val mangaMode: MangaMode, val novelFontSize: Int)
+
+    fun snapshot() = Snapshot(theme(), mangaMode(), novelFontSize())
+
+    fun restore(snapshot: Snapshot) {
+        prefs.edit()
+            .putString(KEY_THEME, snapshot.theme.name)
+            .putString(KEY_MANGA_MODE, snapshot.mangaMode.name)
+            .putInt(KEY_NOVEL_FONT_SIZE, snapshot.novelFontSize.coerceIn(14, 32))
+            .apply()
+    }
 
     fun theme(): Theme = runCatching {
         Theme.valueOf(prefs.getString(KEY_THEME, Theme.SYSTEM.name) ?: Theme.SYSTEM.name)

@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +60,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.frankensteinlab.app.data.AppPreferences
 import com.frankensteinlab.app.data.LibraryItem
 import com.frankensteinlab.app.data.LibraryStore
+import com.frankensteinlab.app.data.LocalBackup
 import com.frankensteinlab.app.data.LocalMediaFiles
 import com.frankensteinlab.app.files.FileManagerScreen
 import com.frankensteinlab.app.ui.LocalReaderScreen
@@ -110,6 +112,9 @@ private fun FrankensteinApp() {
     var selectedItem by remember { mutableStateOf<LibraryItem?>(null) }
     var tab by remember { mutableIntStateOf(MainTab.LIBRARY.ordinal) }
     var pendingRemoval by remember { mutableStateOf<LibraryItem?>(null) }
+    var pendingRestore by remember { mutableStateOf<LocalBackup.RestoreData?>(null) }
+    var pendingBackupSelection by remember { mutableStateOf(true to true) }
+    var settingsRevision by remember { mutableIntStateOf(0) }
     var storeError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(store) {
@@ -176,6 +181,41 @@ private fun FrankensteinApp() {
                     return@launch
                 }
                 addLocalUri(uri, name, fromTree = false)
+            }
+        }
+    }
+
+    val backupExportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri != null) {
+            val selection = pendingBackupSelection
+            scope.launch {
+                try {
+                    LocalBackup.export(
+                        context = context,
+                        destination = uri,
+                        store = store,
+                        preferences = preferences,
+                        includeLibrary = selection.first,
+                        includePreferences = selection.second,
+                    )
+                    message("كُتبت نسخة JSON وفُحص حجمها؛ احفظها في مكان آمن.")
+                } catch (failure: Exception) {
+                    message("تعذر إنشاء النسخة: ${failure.localizedMessage ?: "تحقق من مساحة الوجهة وصلاحياتها."}")
+                }
+            }
+        }
+    }
+
+    val backupImportPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    pendingRestore = LocalBackup.read(context, uri)
+                } catch (failure: Exception) {
+                    message("رُفضت النسخة ولم تُستعد بيانات: ${failure.localizedMessage ?: "تعذر فحص الملف."}")
+                }
             }
         }
     }
@@ -250,8 +290,14 @@ private fun FrankensteinApp() {
                             MainTab.SETTINGS -> SettingsScreen(
                                 preferences = preferences,
                                 currentTheme = theme,
+                                settingsRevision = settingsRevision,
                                 onThemeChange = { theme = it; preferences.setTheme(it) },
                                 onMessage = ::message,
+                                onExportBackup = { includeLibrary, includePreferences ->
+                                    pendingBackupSelection = includeLibrary to includePreferences
+                                    backupExportPicker.launch("FrankensteinLab-backup.json")
+                                },
+                                onImportBackup = { backupImportPicker.launch(arrayOf("*/*")) },
                             )
                         }
                     }
@@ -286,6 +332,44 @@ private fun FrankensteinApp() {
                     },
                     dismissButton = { TextButton(onClick = { pendingRemoval = null }) { Text("إلغاء") } },
                     properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true),
+                )
+            }
+
+            pendingRestore?.let { backup ->
+                AlertDialog(
+                    onDismissRequest = { pendingRestore = null },
+                    title = { Text("معاينة واستعادة النسخة") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("عناصر المكتبة في الملف: ${backup.libraryItems?.size ?: 0}. ستُضاف العناصر غير الموجودة فقط؛ لن تُحذف العناصر الحالية ولن يُستبدل تقدمها.")
+                            Text(if (backup.preferences != null) "تتضمن النسخة إعدادات التطبيق؛ تأكيد الاستعادة سيستبدل إعدادات المظهر والمانغا وحجم النص الحالية." else "لا تتضمن النسخة إعدادات التطبيق.")
+                            Text("النسخة تحفظ بيانات الفهرس والتقدم والإعدادات فقط، ولا تحتوي ملفات EPUB/CBZ/الفيديو أو أذونات الوصول إليها. قد تحتاج لإعادة اختيار الملفات بعد نقل النسخة إلى جهاز آخر. لا تتضمن مفاتيح أو بيانات اعتماد.")
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            pendingRestore = null
+                            scope.launch {
+                                try {
+                                    val added = backup.libraryItems?.let { library ->
+                                        withContext(Dispatchers.IO) { store.mergeBackup(library) }
+                                    } ?: 0
+                                    backup.preferences?.let { snapshot ->
+                                        preferences.restore(snapshot)
+                                        theme = snapshot.theme
+                                        settingsRevision++
+                                    }
+                                    items = withContext(Dispatchers.IO) { store.all() }
+                                    storeError = null
+                                    message("اكتملت الاستعادة: أُضيف $added عنصر جديد؛ لم تُستبدل العناصر المتكررة.")
+                                } catch (failure: Exception) {
+                                    storeError = failure.localizedMessage ?: "تعذرت استعادة البيانات."
+                                    message("تعذرت الاستعادة؛ لم تُحذف الملفات الأصلية.")
+                                }
+                            }
+                        }) { Text("دمج/استعادة") }
+                    },
+                    dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("إلغاء") } },
                 )
             }
         }
@@ -352,11 +436,16 @@ private fun LibraryScreen(
 private fun SettingsScreen(
     preferences: AppPreferences,
     currentTheme: AppPreferences.Theme,
+    settingsRevision: Int,
     onThemeChange: (AppPreferences.Theme) -> Unit,
     onMessage: (String) -> Unit,
+    onExportBackup: (includeLibrary: Boolean, includePreferences: Boolean) -> Unit,
+    onImportBackup: () -> Unit,
 ) {
-    var mangaMode by remember { mutableStateOf(preferences.mangaMode()) }
+    var mangaMode by remember(settingsRevision) { mutableStateOf(preferences.mangaMode()) }
     var showGuide by remember { mutableStateOf(false) }
+    var backupLibrary by remember { mutableStateOf(true) }
+    var backupPreferences by remember { mutableStateOf(true) }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -373,6 +462,7 @@ private fun SettingsScreen(
             Text("الفيديو: يشغّل Media3 الملف المحلي ويعيد فتحه من آخر موضع محفوظ. يتوقف عند انتقال التطبيق للخلفية ويُستأنف عند العودة فقط إذا كان يعمل قبلها، وتُحرر جلسة المشغل عند مغادرة الشاشة. لا تظهر خيارات جودة أو ترجمة أو بث لأنها غير مدمجة.")
             Text("المظهر: «اتباع مظهر الجهاز» يختار الفاتح أو الداكن وفق إعداد Android؛ الخياران الآخران يثبتان المظهر. وضع المانغا يغيّر طريقة العرض فقط، ولا يؤثر في مشغل الفيديو أو قارئ الروايات.")
             Text("الاتصال: وظائف القراءة والملفات الحالية تعمل على محتوى محلي اختاره المستخدم ولا تحتاج إلى اتصال بالإنترنت. لا توجد مستودعات إضافات أو خدمات مزامنة أو ذكاء اصطناعي مفعلة حاليًا.")
+            Text("النسخ الاحتياطي: ملف JSON بإصدار محدد وفحص SHA-256، ويشمل عند اختيارك فهرس المكتبة وتقدمها وإعدادات التطبيق. لا ينسخ الملفات نفسها أو أذونات SAF؛ نقل الملف إلى جهاز آخر لا ينقل محتوى الوسائط.")
             Text("استعادة الافتراضيات: اضغط الزر في نهاية صفحة الإعدادات؛ يعيد المظهر إلى اتباع الجهاز، والمانغا إلى التمرير الرأسي، وحجم نص EPUB إلى 18. لا يمسح مكتبتك أو ملفاتك.")
         } else {
             Text("المظهر", style = MaterialTheme.typography.titleLarge)
@@ -399,6 +489,21 @@ private fun SettingsScreen(
                 }
             }
             Text("حجم نص EPUB يُعدّل من داخل القارئ بواسطة أ− وأ+. لا تظهر إعدادات لخدمات لم تُدمج.")
+            Text("النسخ الاحتياطي والاستعادة", style = MaterialTheme.typography.titleLarge)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = backupLibrary, onCheckedChange = { backupLibrary = it })
+                Text("فهرس المكتبة والتقدم")
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = backupPreferences, onCheckedChange = { backupPreferences = it })
+                Text("إعدادات المظهر والقراء")
+            }
+            Text("يحتوي الملف عناوين العناصر وURIs وتقدمها والإعدادات المحددة. لا يحتوي ملفات الوسائط أو صلاحيات الوصول أو أسرارًا. ملف JSON غير مشفّر؛ اختر وجهة خاصة.")
+            Button(
+                enabled = backupLibrary || backupPreferences,
+                onClick = { onExportBackup(backupLibrary, backupPreferences) },
+            ) { Text("إنشاء نسخة احتياطية") }
+            TextButton(onClick = onImportBackup) { Text("فحص واستعادة نسخة JSON") }
             TextButton(onClick = {
                 preferences.reset()
                 mangaMode = AppPreferences.MangaMode.CONTINUOUS_VERTICAL

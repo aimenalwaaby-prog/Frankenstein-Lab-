@@ -46,6 +46,22 @@ class LibraryStore(context: Context) {
         write(all().map { if (it.id == id) it.copy(progress = progress.coerceAtLeast(0L)) else it })
     }
 
+    /** Adds only missing URI/kind pairs. Existing titles and progress are never silently overwritten. */
+    fun mergeBackup(imported: List<LibraryItem>): Int = synchronized(lock) {
+        val current = all().toMutableList()
+        val existing = HashSet<Pair<String, LibraryItem.Kind>>()
+        current.forEach { item -> existing.add(item.uri.toString() to item.kind) }
+        var added = 0
+        imported.forEach { item ->
+            if (existing.add(item.uri.toString() to item.kind)) {
+                current += item.copy(id = UUID.randomUUID().toString())
+                added++
+            }
+        }
+        if (added > 0) write(current)
+        added
+    }
+
     fun remove(id: String): Uri? = synchronized(lock) {
         val items = all()
         val removed = items.firstOrNull { it.id == id } ?: return null

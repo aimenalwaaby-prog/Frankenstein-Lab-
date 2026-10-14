@@ -9,6 +9,7 @@ import io.grimoire.app.data.epub.EpubParser
 import io.grimoire.app.data.epub.ParsedEpub
 import java.io.File
 import java.security.MessageDigest
+import java.util.Locale
 import java.util.zip.ZipFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -32,8 +33,8 @@ object LocalMediaFiles {
     }
 
     fun typeFor(context: Context, uri: Uri, name: String): LibraryItem.Kind? {
-        val extension = name.substringAfterLast('.', "").lowercase()
-        val mime = context.contentResolver.getType(uri).orEmpty().lowercase()
+        val extension = name.substringAfterLast('.', "").lowercase(Locale.ROOT)
+        val mime = context.contentResolver.getType(uri).orEmpty().lowercase(Locale.ROOT)
         return when {
             extension == "epub" || mime == "application/epub+zip" -> LibraryItem.Kind.NOVEL
             extension == "cbz" -> LibraryItem.Kind.COMIC
@@ -63,7 +64,7 @@ object LocalMediaFiles {
         val digest = MessageDigest.getInstance("SHA-256")
             .digest(identity.toByteArray(Charsets.UTF_8))
             .take(12)
-            .joinToString("") { byte -> "%02x".format(byte) }
+            .joinToString("") { byte -> "%02x".format(Locale.ROOT, byte.toInt() and 0xff) }
         val directory = File(context.cacheDir, "opened-local-media").apply { mkdirs() }
         val finalFile = File(directory, "$digest.bin")
         if (finalFile.isFile && finalFile.length() in 1..MAX_SOURCE_BYTES) return@withContext finalFile
