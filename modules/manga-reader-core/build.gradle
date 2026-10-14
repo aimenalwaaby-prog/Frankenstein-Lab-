@@ -1,0 +1,55 @@
+// Kotlin Multiplatform module extracted from the app per improvement plan 2026-09 §8.2 / ADR 0002 I1.
+//
+// Contents: reader geometry, scenes, camera/progress snapshots, drag state, pure transition
+// semantics and the resource-window planner contract. The module intentionally has ZERO
+// Android/Compose/renderer/application-layer dependencies — the compile-time classpath IS
+// the I1 boundary (the text-level ReaderCoreIsolationGuardTest keeps a second line of
+// defense on top of it, improvement plan §6.2).
+//
+// KMP (docs/architecture/kmp-ios-plan-2026-10.md, spike S1): the iOS app is the "real
+// multiplatform consumer" that §8.2 asked for before introducing KMP. All code lives in
+// commonMain, so `compileCommonMainKotlinMetadata` is the portability check — unlike a plain
+// JVM compile it rejects JVM-only API. The Android app keeps consuming the `jvm` variant.
+plugins {
+	id 'org.jetbrains.kotlin.multiplatform'
+}
+
+kotlin {
+	jvm {
+		compilerOptions {
+			jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+			// Java-annotation nullability only exists on the JVM; keep it out of the native targets.
+			freeCompilerArgs.add('-Xjspecify-annotations=strict')
+		}
+	}
+
+	// Apple targets are declared on every host but can only be linked on macOS. On Windows/Linux
+	// KGP disables them and the commonMain metadata compilation is what guards portability.
+	iosArm64()
+	iosSimulatorArm64()
+
+	compilerOptions {
+		freeCompilerArgs.addAll(
+			'-opt-in=kotlin.ExperimentalStdlibApi',
+			'-opt-in=kotlin.contracts.ExperimentalContracts',
+			'-Xannotation-default-target=first-only',
+		)
+	}
+
+	sourceSets {
+		getByName('jvmTest') {
+			dependencies {
+				// kotest-runner-junit5 provides the JUnit 5 platform + jupiter api but NOT the jupiter
+				// engine (the app gets it transitively from other test deps). Declare it explicitly so
+				// the platform can discover the module's Jupiter tests; 5.8.2 aligns with kotest's
+				// junit-platform 1.8.2 / jupiter-api 5.8.2 pair.
+				implementation libs.kotest.runner.junit5
+				implementation 'org.junit.jupiter:junit-jupiter:5.8.2'
+			}
+		}
+	}
+}
+
+tasks.withType(Test).configureEach {
+	useJUnitPlatform()
+}
