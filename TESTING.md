@@ -1,12 +1,12 @@
 # Testing
 
-The imported Kototoro module contains its upstream `jvmTest` source set (32 test/fixture files). This repository has not executed those tests yet. No Android SDK is installed in the current sandbox and no Gradle dependency resolution was performed.
+The repository contains 32 upstream JVM test/fixture files for `manga-reader-core`, plus local tests for the Grimoire EPUB parser. No Gradle build or test command has been executed yet. The current sandbox has JDK 21 but no Android SDK; dependency resolution has intentionally not been run.
 
 When a network-enabled JDK 21 environment is available:
 
 ```bash
 ./gradlew :modules:manga-reader-core:jvmTest
-./gradlew :modules:manga-reader-core:compileKotlinJvm
+./gradlew :modules:novel-epub:jvmTest
 ```
 
-A passing result must be captured from the actual command before marking the module as verified here. Android instrumentation tests and APK builds are outside the current requested scope.
+The EPUB parser tests create a small temporary EPUB archive in memory-backed test setup; no external book file is required. A passing result must be captured from actual command output before marking either module as verified. Android instrumentation tests and APK builds are outside the current requested scope.

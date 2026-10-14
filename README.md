@@ -4,23 +4,31 @@
 
 ## الحالة الحالية
 
-المستودع المستهدف كان فارغًا عند بدء العمل. أُضيفت إليه الآن وحدة Kotlin Multiplatform حقيقية لقلب قارئ المانغا مأخوذة من وحدة `reader-core` في Kototoro، مع ملفات الاختبار والاختبارات الحارسة الموجودة في المصدر. هذا **ليس إصدار التطبيق النهائي** ولا يتضمن حتى الآن واجهة Android أو مشغل وسائط أو مصادر/إضافات.
+المستودع المستهدف كان فارغًا عند بدء العمل. أُضيفت وحدتان مصدريتان حقيقيتان معزولتان:
 
-- المصدر: [Kototoro](https://github.com/Kototoro-app/Kototoro)، فرع `devel`، الالتزام `6410cdd1e1a92031f429c46cec39b5d2ea041fa2`.
-- الترخيص المرفق: Apache-2.0. راجع [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) و[`LICENSE`](LICENSE).
-- الوحدة المنقولة: [`modules/manga-reader-core`](modules/manga-reader-core).
-- لا يحتوي المشروع على APK أو ملفات وسائط/كتالوجات مصادر تم تنزيلها.
+- `modules/manga-reader-core`: قلب قارئ المانغا من Kototoro، بما فيه 41 ملف إنتاج و32 ملف اختبار/fixture أصليًا.
+- `modules/novel-epub`: محلل EPUB من Grimoire، مع اختبارات محلية جديدة تولّد كتاب EPUB صغيرًا داخل الاختبار ولا تعتمد على كتب أو صور تنزيلية.
+
+هذه مكونات وظيفية، لكنها **ليست تطبيق Android مكتملًا**: لا توجد بعد واجهة Android تربط هذه المكتبات للمستخدم، ولا مشغل وسائط أو مصادر/إضافات أو مدير ملفات مدمج.
+
+## المصادر والتراخيص
+
+- [Kototoro](https://github.com/Kototoro-app/Kototoro)، فرع `devel`، الالتزام `6410cdd1e1a92031f429c46cec39b5d2ea041fa2`، Apache-2.0.
+- [Grimoire](https://github.com/Operation-Grimoire/grimoire)، فرع `master`، الالتزام `8016041da36d8db3a6935268aa144d798cf204c0`، Apache-2.0.
+- إصدار Jsoup المثبت في ملف اعتماد واجهات Grimoire: `1.17.2` من Maven Central. يُعلن هنا كاعتماد مباشر لوحدة محلل EPUB بدل الاتكال على اعتماد انتقالي.
+
+التفاصيل في [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) و[`LICENSE`](LICENSE) و[`licenses/Grimoire-LICENSE`](licenses/Grimoire-LICENSE).
 
 ## البناء والاختبار
 
-تتطلب وحدة `manga-reader-core` Gradle 9.7.0 وJDK 21. لم يُشغّل البناء أو الاختبارات في هذه المرحلة، ولم يُبنَ APK، ولم تُنزّل تبعيات Gradle. عند توفر بيئة بناء واتصال بالمستودعات، يمكن تشغيل:
+تتطلب وحدات Kotlin Gradle 9.7.0 وJDK 21. جرى إعداد أوامر الاختبار، لكن لم يُشغّل Gradle ولم تُنزّل تبعياته في هذه المرحلة؛ لذا لم تُعلن نتائج نجاح.
 
 ```bash
 ./gradlew :modules:manga-reader-core:jvmTest
-./gradlew :modules:manga-reader-core:compileKotlinJvm
+./gradlew :modules:novel-epub:jvmTest
 ```
 
-لا تدّعِ نجاح هذه الأوامر قبل تشغيلها فعليًا. مهام iOS المعرّفة في المصدر لا يمكن بناؤها على Linux.
+لم يُبنَ APK، ولم تُنزّل وسائط أو كتب أو موارد تطبيقات. لا يُعلن نجاح أي أمر قبل تشغيله فعليًا. مهام iOS التابعة لمصدر Kototoro لا تُبنى على Linux.
 
 ## سياسة الدمج
 
