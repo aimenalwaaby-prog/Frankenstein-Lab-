@@ -1,12 +1,18 @@
-# Testing
+# الاختبار والتحقق
 
-The repository contains 32 upstream JVM test/fixture files for `manga-reader-core`, plus local tests for the Grimoire EPUB parser. No Gradle build or test command has been executed yet. The current sandbox has JDK 21 but no Android SDK; dependency resolution has intentionally not been run.
+## الحالة الحالية
 
-When a network-enabled JDK 21 environment is available:
+توجد اختبارات JVM أصلية ضمن وحدة Reader Core واختبارات محلية لمحلل EPUB، لكن **لم تُشغّل**. اجتاز `git diff --check` وفُكّ ترميز ملفات XML الخمسة عبر محلل XML القياسي. لم يُشغّل Gradle أو محلل Kotlin/Android، ولم تُحل الاعتماديات، ولم يُبنَ APK أو تُحمّل وسائط أو موارد تطبيق؛ احترامًا لطلب المستخدم. لذلك لم تُثبت بعد قابلية ترجمة التطبيق إلى Android أو سلوكه على جهاز. المراجعة الساكنة ليست بديلًا عن ذلك.
+
+## الفحوص التالية بعد السماح بتنزيل الاعتماديات
+
+باستخدام Android SDK API 37 وJDK مناسب:
 
 ```bash
-./gradlew :modules:manga-reader-core:jvmTest
-./gradlew :modules:novel-epub:jvmTest
+./gradlew :modules:manga-reader-core:jvmTest :modules:novel-epub:jvmTest
+./gradlew :app:assembleDebug
 ```
 
-The EPUB parser tests create a small temporary EPUB archive in memory-backed test setup; no external book file is required. A passing result must be captured from actual command output before marking either module as verified. Android instrumentation tests and APK builds are outside the current requested scope.
+بعدها اختبر على محاكي/جهاز: RTL والمظهر وشاشة البداية؛ ملفات EPUB السليمة والفاسدة والنص العربي والصور وحد الحجم؛ CBZ بترقيم صفحات طبيعي واتجاه RTL وصور كبيرة أو تالفة وحفظ الصفحة؛ فيديو محلي مدعوم وغير مدعوم واستعادة الموضع وإظهار الخطأ؛ أذونات SAF طويلة المدى، مزود يرفض الكتابة، النسخ والنقل وتعارض الأسماء وفشل حذف شجرة؛ إزالة عنصر المكتبة دون حذف الملف وفقد إذن URI؛ وأداء الذاكرة على جهاز متوسط.
+
+لا توجد حاليًا اختبارات Android Instrumented أو UI/تكامل للتطبيق ومدير الملفات والمشغل. لا يُعلَن نجاح أي اختبار إلا بعد حفظ نتيجة تشغيل فعلية.

@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.Frankenstein" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">#30234A</item>
+        <item name="android:statusBarColor">#30234A</item>
+        <item name="android:windowBackground">#F7F4FA</item>
+    </style>
+</resources>

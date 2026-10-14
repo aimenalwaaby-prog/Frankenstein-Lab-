@@ -1,14 +1,25 @@
-# Architecture and integration boundaries
+# بنية Frankenstein Lab الحالية
 
-Frankenstein Lab is intended to be an Android product assembled from independently sourced modules. The repository currently contains two imported library components and is not yet a complete Android application.
+يتألف المستودع من تطبيق Android تجميعي ووحدتين مصدرّيتين معزولتين. لا يعتمد التطبيق على استنساخ تطبيق واحد كاملًا؛ اقتصر نقل الشيفرة على Reader Core من Kototoro ومحلل EPUB من Grimoire. بقية الواجهة/الخدمات المحلية مكتوبة كتكامل مستقل على Android APIs.
 
-## Current modules
+## الوحدات
 
-- `:modules:manga-reader-core` — Kototoro's platform-independent reader core. It models page/scene geometry, viewport and progress state, transitions, and a resource-window plan. Its production source has no Android or Compose dependency.
-- `:modules:novel-epub` — Grimoire's EPUB parser, extracted as a JVM module with an explicit Jsoup dependency. It parses book metadata, navigation, chapter text, and embedded image bytes. The surrounding Grimoire importer, database, UI, and TTS have not been integrated.
+- `:app` — واجهة Compose عربية RTL، تفضيلات محلية، فهرس مكتبة بسيط، وصول ملفات عبر Storage Access Framework، عارض CBZ/EPUB ومشغل Media3 محلي. لا يطلب إذن تخزين واسعًا.
+- `:modules:manga-reader-core` — نموذج Reader Core من Kototoro، Kotlin/JVM + KMP source set، دون اعتماد إنتاجي على Android أو Compose.
+- `:modules:novel-epub` — محلل EPUB من Grimoire مع Jsoup، منفصل كـKotlin/JVM.
 
-The Android page loader, image renderer, gestures/UI, persistence adapters, and app navigation are not represented as implemented. Future Android components must connect to these libraries through explicit adapters after the corresponding upstream code, APIs, dependencies, and licenses have been inspected.
+## مسار الملفات المحلية
 
-## Integration constraints
+يختار المستخدم URI أو شجرة مجلد عبر منتقي Android. يحتفظ التطبيق بإذن قابل للاستمرار عند إتاحته، ولا ينسخ محتوى المصدر تلقائيًا إلى المكتبة. تُنسخ ملفات EPUB/CBZ مؤقتًا إلى cache مع سقف حجم، ثم يقرأ محلل EPUB أو `ZipFile` المدخلات. تُفك الصور بعينة أصغر لتقليل الذاكرة. الفيديو المحلي يُمرر URI إلى Media3 مباشرة، ويُحرّر ExoPlayer عند إغلاق الشاشة.
 
-Keep each upstream license and attribution with its actual files. Record exact source URL, branch/commit, copied paths, changes, and dependency licenses. Avoid importing whole applications when a smaller module is sufficient. Keep source/plugin systems separate until each native runtime is integrated and tested. Do not expose unsupported player controls, add-on types, or service options in the UI. Arabic and RTL requirements apply to every user-facing screen once the Android UI is introduced.
+## التخزين الحالي
+
+تُحفظ بيانات المكتبة الصغيرة في SharedPreferences بصيغة JSON: معرف، عنوان، URI، نوع، وموضع تقدم. تحفظ التفضيلات المظهر ووضع المانغا وحجم نص الرواية. لا تخزن الشيفرة الحالية مفاتيح API أو بيانات اعتماد. هذا التخزين مناسب لنموذج محلي محدود فقط؛ الانتقال إلى Room أو استيراد/تصدير آمن مطلوب إذا كبرت المكتبة.
+
+## حدود لم تُنفذ
+
+لا توجد واجهة موحدة لإضافات/مصادر المحتوى حتى لا يُفرض تنسيق زائف على أنظمة غير متوافقة. لا توجد محركات إضافات أو مصادر شبكة أو تنزيلات أو خدمة مزامنة أو ذكاء اصطناعي أو نظام نسخ احتياطي. Media3 هو المشغل الوحيد المنفذ وفي سياق ملف محلي، ولا تظهر خيارات مصدرية غير مدعومة.
+
+## التراخيص ومصادر الشيفرة
+
+تفاصيل الملفات والالتزامات والترخيص في `THIRD_PARTY_NOTICES.md` و`SOURCE_AUDIT.md`. تُفصل حقوق كود المكتبة عن اعتماديات التطبيق، ويجب فحص شجرة الاعتماديات الانتقالية والإشعارات قبل توزيع APK. Zangetsu غير مدمج وفق طلب المستخدم، ورابط Club Stream غير محدد فلا يُفترض مستودع بديل.

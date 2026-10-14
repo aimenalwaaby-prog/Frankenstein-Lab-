@@ -5,22 +5,33 @@
 - Upstream repository: https://github.com/Kototoro-app/Kototoro
 - Source module: `reader-core/`
 - Upstream branch: `devel`; commit: `6410cdd1e1a92031f429c46cec39b5d2ea041fa2`
-- License: Apache License 2.0; the upstream license text is preserved in [`LICENSE`](LICENSE).
-- Imported paths: `reader-core/src/commonMain/`, `reader-core/src/jvmTest/`, and the module `build.gradle` (stored under `modules/manga-reader-core/`). The original package namespace and upstream attribution in source files are retained.
-- Changes made to imported source: none in this integration.
-- Scope: pure Kotlin reader geometry, scene/viewport/progress models, transition semantics, and resource-window planning. It is a library component, not a complete interactive manga-reader screen.
+- License: Apache License 2.0; upstream license text is preserved in [`LICENSE`](LICENSE).
+- Imported paths: `reader-core/src/commonMain/`, `reader-core/src/jvmTest/`, and module build file in `modules/manga-reader-core/`; upstream namespace and notices are retained.
+- Changes to imported production source: none. The Android UI/adapter is separate project code.
+- Scope: reader geometry, scene/progress and resource-window models; this is not the complete upstream reader UI.
 
 ## Grimoire — EPUB parser
 
 - Upstream repository: https://github.com/Operation-Grimoire/grimoire
 - Upstream branch: `master`; commit: `8016041da36d8db3a6935268aa144d798cf204c0`
-- License: Apache License 2.0; the upstream license text is preserved in [`licenses/Grimoire-LICENSE`](licenses/Grimoire-LICENSE).
-- Imported path: `app/src/main/java/io/grimoire/app/data/epub/EpubParser.kt`, retained at `modules/novel-epub/src/jvmMain/kotlin/io/grimoire/app/data/epub/EpubParser.kt` with its original namespace.
-- Changes to imported parser code: none. Separate local parser tests were added under the module's `jvmTest` source set.
-- The standalone parser's direct dependency on Jsoup is pinned to `1.17.2`, the version declared by the Grimoire extensions API repository at `https://github.com/Operation-Grimoire/grimoire-extensions-api` (commit `dd6145178e8d421e2f7c76991d3c66580c858a72`).
+- License: Apache License 2.0; upstream text is preserved in [`licenses/Grimoire-LICENSE`](licenses/Grimoire-LICENSE).
+- Imported file: `app/src/main/java/io/grimoire/app/data/epub/EpubParser.kt`, stored at `modules/novel-epub/src/jvmMain/kotlin/io/grimoire/app/data/epub/EpubParser.kt` with original namespace.
+- Changes to imported parser: none. Local parser tests are separate.
+- Direct Jsoup dependency: `1.17.2`, pinned from the Grimoire extensions API repository version; Jsoup is distributed under MIT License. Verify the matching license notice when resolving distribution artifacts.
 
-Apache-2.0 redistribution conditions apply to both source components. Keep the applicable license and attribution materials, mark any future changed files, and do not imply affiliation or endorsement by Kototoro or Grimoire. No upstream marks, APKs, books, images, video, or source catalog payloads are included.
+## Direct application dependencies
 
-## Dependency status
+The application declares AndroidX Compose/Activity/Core/DocumentFile/Lifecycle, AndroidX Media3 ExoPlayer/UI `1.9.3`, and Kotlin Coroutines Android. These projects publish under Apache License 2.0; retain their license/attribution files in any binary distribution. Test dependencies include JUnit 5 and Kotest. This list is based on declared direct dependencies; Gradle dependency resolution has not been run, so it is not a complete transitive SBOM or binary notice bundle.
 
-No third-party binaries have been bundled. Gradle declares Jsoup, Kotest, and JUnit for the source modules' build/tests. Dependency resolution has not been run, so the exact transitive dependency graph and notices for resolved artifacts remain to be recorded before binary distribution.
+## Candidate repositories audited but not copied as application code
+
+- Kotori: https://github.com/tailolicon/kotori — Apache-2.0. No source module copied.
+- Nekoyomi: https://github.com/Seguaz/Nekoyomi — Apache-2.0. No source module copied.
+- Mihon: https://github.com/mihonapp/mihon — Apache-2.0. No source module copied.
+- Aniyomi: https://github.com/aniyomiorg/aniyomi — Apache-2.0. No source module copied.
+- CloudStream, OpenStream, Material Files, and mpv-android were reviewed as candidates; no source code from these repositories was copied into this version. Use each upstream's current LICENSE and dependency notices before any later integration.
+- Zangetsu was explicitly excluded per user instruction; Club Stream was not guessed because its repository is unspecified.
+
+Apache-2.0 redistribution conditions apply to the imported source modules. Preserve licenses and attribution, mark future changes to imported files, and do not imply upstream endorsement. No upstream marks, APKs, books, images, video, or source catalog payloads are included.
+
+Before binary distribution, resolve all dependencies, collect their exact LICENSE/NOTICE texts and versions, generate an SBOM, and check compatibility for the selected distribution model.
